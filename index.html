@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CaseEdge — MBA Interview Prep</title>
+<meta name="description" content="Interactive consulting, tech/PM, and Palantir interview prep for MBA recruiting.">
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+<div class="app-shell" id="appShell">
+  <div class="scrim"></div>
+  <aside class="sidebar">
+    <div class="brand"><span class="dot"></span>Case<span>Edge</span></div>
+    <div class="brand-sub">MBA interview prep · Fuqua '28</div>
+    <nav id="sidebarNav"></nav>
+  </aside>
+  <main class="content">
+    <div class="topbar">
+      <button class="menu-toggle" id="menuToggle">☰</button>
+      <span class="tb-brand">CaseEdge</span>
+    </div>
+    <div id="app"></div>
+  </main>
+</div>
+
+<!-- framework -->
+<script src="assets/js/app.js"></script>
+<!-- engine -->
+<script src="assets/js/engine/drill.js"></script>
+<script src="assets/js/engine/coach.js"></script>
+<script src="assets/js/engine/progress.js"></script>
+<!-- skill modules -->
+<script src="assets/js/data/foundations.js"></script>
+<script src="assets/js/data/frameworks.js"></script>
+<script src="assets/js/data/sizing.js"></script>
+<script src="assets/js/data/math.js"></script>
+<script src="assets/js/data/exhibits.js"></script>
+<script src="assets/js/data/behavioral.js"></script>
+<!-- tracks -->
+<script src="assets/js/data/tracks/palantir.js"></script>
+<script src="assets/js/data/tracks/amazon.js"></script>
+<script src="assets/js/data/tracks/mbb.js"></script>
+<script src="assets/js/data/tracks/tier2-boozallen.js"></script>
+<script src="assets/js/data/tracks/techpm.js"></script>
+<!-- boot -->
+<script>CE.start();</script>
+</body>
+</html>
