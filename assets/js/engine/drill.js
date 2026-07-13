@@ -1,6 +1,9 @@
 /* ===================================================================
-   Generic drill runner. Handles numeric and multiple-choice questions,
-   timer, feedback, results. Modules supply a question stream + hooks.
+   Generic drill runners.
+   - CE.Drill.run   : question-count rounds (numeric + multiple-choice)
+   - CE.Drill.sprint: timed rounds (Zetamac-style) — auto-submit on an
+     exact match, instant advance, countdown clock.
+   Modules supply a question stream + hooks.
    =================================================================== */
 "use strict";
 CE.parseAns = function(s){
@@ -13,14 +16,28 @@ CE.parseAns = function(s){
   return isNaN(v)?null:v*mult;
 };
 
-/* config:
-   { mount(el), count, next()->question, onResult(q,ok,ms), onComplete(results),
-     title }
-   question:
+/* question:
    { type:'numeric'|'mc', q, context, tol, ans, choices, correctIndex, how,
-     placeholder }
+     placeholder, inputmode ('decimal' default | 'text'), keys (['K','M','B'] or ['±']) }
 */
+function answerKeysHTML(c){
+  if(!c.keys||!c.keys.length) return "";
+  return `<div class="btn-row" style="justify-content:center;margin-top:10px">${
+    c.keys.map(k=>`<button class="btn sm" data-anskey="${k}" type="button">${k}</button>`).join("")}</div>`;
+}
+function wireAnswerKeys(area, input){
+  CE.$$("[data-anskey]",area).forEach(b=>b.onclick=()=>{
+    const k=b.dataset.anskey;
+    if(k==="±") input.value = input.value.startsWith("-") ? input.value.slice(1) : "-"+input.value;
+    else input.value += k;
+    input.focus();
+    input.dispatchEvent(new Event("input"));
+  });
+}
+const exactMatch=(v,ans)=>v!==null && Math.abs(v-ans)<1e-9;
+
 CE.Drill = {
+  /* ---------- classic question-count round ---------- */
   run(target, cfg){
     const state={i:0, results:[], cur:null, answered:false, qStart:0, timer:null};
     const count=cfg.count||10;
@@ -59,10 +76,12 @@ CE.Drill = {
         CE.$$(".mc-opt",area).forEach(o=>o.onclick=()=>submitMC(+o.dataset.idx));
       }else{
         area.innerHTML=`<div class="answer-row">
-          <input id="dInput" inputmode="text" autocomplete="off" placeholder="${c.placeholder||"answer"}">
+          <input id="dInput" inputmode="${c.inputmode||"decimal"}" autocomplete="off" placeholder="${c.placeholder||"answer"}">
           <button class="btn primary" id="dGo">Go</button></div>
+          ${answerKeysHTML(c)}
           ${c.tol>=0.05?`<div class="small muted" style="margin-top:8px">≈ estimate — within ${Math.round(c.tol*100)}% counts</div>`:""}`;
         const inp=CE.$("#dInput",area); inp.focus();
+        wireAnswerKeys(area, inp);
         CE.$("#dGo",area).onclick=submitNum;
         inp.onkeydown=e=>{ if(e.key==="Enter") state.answered?advance():submitNum(); };
       }
@@ -122,6 +141,123 @@ CE.Drill = {
       CE.renderResults(target, state.results, cfg);
     }
     render();
+  },
+
+  /* ---------- timed sprint ----------
+     cfg: {seconds, next(), onResult(q,ok,ms), onComplete(results)->{best,isRecord}|void,
+           backPath, restart()}                                            */
+  sprint(target, cfg){
+    const state={results:[], cur:null, qStart:0, over:false, locked:false};
+    const total=cfg.seconds*1000;
+    const t0=performance.now();
+    let timer=null, flashTO=null;
+
+    target.innerHTML=`
+      <div class="drill-top">
+        <span id="sScore">✅ 0</span>
+        <span id="sTopic"></span>
+        <span id="sTimer" style="font-weight:800; color:var(--text)">${cfg.seconds}s</span>
+      </div>
+      <div class="progressbar"><div id="sPbar" style="width:100%"></div></div>
+      <div class="card qbox">
+        <div class="qcontext" id="sContext"></div>
+        <div class="qtext" id="sQ"></div>
+        <div class="answer-row">
+          <input id="sInput" autocomplete="off" placeholder="type answer — exact match auto-submits">
+          <button class="btn primary" id="sGo">Go</button>
+        </div>
+        <div id="sKeys"></div>
+        <div id="sFlash" style="margin-top:14px; min-height:22px; font-size:15px; font-weight:600"></div>
+      </div>`;
+
+    const inp=CE.$("#sInput",target);
+    const flash=CE.$("#sFlash",target);
+
+    function tick(){
+      const left=Math.max(0, total-(performance.now()-t0));
+      CE.$("#sTimer",target).textContent=Math.ceil(left/1000)+"s";
+      CE.$("#sPbar",target).style.width=(left/total*100)+"%";
+      if(left<=0) end();
+    }
+    timer=setInterval(tick,100);
+
+    function nextQ(){
+      if(state.over)return;
+      clearTimeout(flashTO);
+      state.locked=false;
+      state.cur=cfg.next();
+      const c=state.cur;
+      CE.$("#sTopic",target).textContent=c.topic||"";
+      CE.$("#sContext",target).textContent=c.context||"";
+      CE.$("#sQ",target).innerHTML=c.q;
+      inp.setAttribute("inputmode", c.inputmode||"decimal");
+      CE.$("#sKeys",target).innerHTML=answerKeysHTML(c);
+      wireAnswerKeys(CE.$("#sKeys",target), inp);
+      flash.textContent="";
+      inp.value=""; inp.disabled=false; inp.focus();
+      state.qStart=performance.now();
+    }
+
+    function record(ok, given){
+      const ms=performance.now()-state.qStart;
+      state.results.push({q:state.cur.q, ans:state.cur.ans, given, ok, ms, how:state.cur.how, topic:state.cur.topic});
+      if(cfg.onResult)cfg.onResult(state.cur, ok, ms);
+      CE.$("#sScore",target).textContent="✅ "+state.results.filter(r=>r.ok).length;
+    }
+
+    inp.addEventListener("input",()=>{
+      if(state.over||state.locked)return;
+      const v=CE.parseAns(inp.value);
+      if(exactMatch(v,state.cur.ans)){        // auto-submit on exact match
+        record(true, v);
+        flash.innerHTML=`<span style="color:var(--green)">✓</span>`;
+        nextQ();
+      }
+    });
+    function submit(){
+      if(state.over||state.locked)return;
+      const v=CE.parseAns(inp.value);
+      if(v===null){ inp.focus(); return; }
+      const c=state.cur;
+      const ok=c.tol>0 ? Math.abs(v-c.ans)<=Math.abs(c.ans)*c.tol+1e-9 : Math.abs(v-c.ans)<1e-6;
+      record(ok, v);
+      if(ok){ flash.innerHTML=`<span style="color:var(--green)">✓</span>`; nextQ(); }
+      else{
+        state.locked=true; inp.disabled=true;
+        flash.innerHTML=`<span style="color:var(--red)">✗ ${CE.fmt(c.ans)}</span>`;
+        flashTO=setTimeout(nextQ, 1300);
+      }
+    }
+    inp.onkeydown=e=>{ if(e.key==="Enter") submit(); };
+    CE.$("#sGo",target).onclick=submit;
+
+    function end(){
+      state.over=true;
+      clearInterval(timer); clearTimeout(flashTO);
+      CE.bumpActivity();
+      const meta=(cfg.onComplete&&cfg.onComplete(state.results))||{};
+      const rs=state.results;
+      const cor=rs.filter(r=>r.ok).length;
+      const acc=rs.length?Math.round(cor/rs.length*100):0;
+      const misses=rs.filter(r=>!r.ok);
+      target.innerHTML=`
+        <div class="card">
+          <h2>${meta.isRecord?"🏆 New personal best!":"⏱️ Sprint over"}</h2>
+          <div class="resgrid">
+            <div class="res"><div class="big">${cor}</div><div class="lbl">correct in ${cfg.seconds}s</div></div>
+            <div class="res"><div class="big">${acc}%</div><div class="lbl">accuracy (${rs.length} attempted)</div></div>
+            <div class="res"><div class="big">${meta.best!=null?meta.best:"–"}</div><div class="lbl">personal best</div></div>
+          </div>
+          ${misses.length?`<h3>Misses to study</h3>`+misses.map(m=>`
+            <div class="miss"><b>${m.q}</b> → ${CE.fmt(m.ans)}${m.how?`<br><span class="muted">💡 ${m.how}</span>`:""}</div>`).join(""):""}
+          <div class="btn-row" style="margin-top:14px">
+            <button class="btn grad" id="sAgain">Sprint again</button>
+            ${cfg.backPath?`<button class="btn" data-nav="${cfg.backPath}">Back</button>`:""}
+          </div>
+        </div>`;
+      CE.$("#sAgain",target).onclick=()=>CE.Drill.sprint(target, cfg);
+    }
+    nextQ();
   }
 };
 

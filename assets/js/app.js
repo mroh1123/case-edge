@@ -28,7 +28,7 @@ window.CE = (function(){
     activeTrack:"palantir",
     streak:0, lastDay:null, days:{},
     onboarded:false,
-    math:{topics:{}, total:0, correct:0, timeSum:0},
+    math:{topics:{}, total:0, correct:0, timeSum:0, bests:{}, missed:[]},
     structuring:{attempts:0, done:{}, selfScores:[]},
     sizing:{attempts:0, done:{}},
     exhibits:{att:0, cor:0, time:0, done:{}},
