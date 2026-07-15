@@ -32,6 +32,11 @@
   function setupString(){ const x=s(); return b64urlEncode({u:x.url,k:x.key,c:x.code}); }
 
   function status(msg){ statusText=msg||""; const el=document.getElementById("syncStatus"); if(el)el.textContent=statusText; }
+  function explain(code){
+    if(code===404) return "⚠️ Table not found — run the setup SQL in Supabase (SQL Editor), then Sync now.";
+    if(code===401 || code===403) return "⚠️ Invalid URL or anon key — double-check both in Settings.";
+    return "⚠️ Couldn't reach your Supabase ("+code+") — working locally.";
+  }
 
   function applyRemote(data){
     applyingRemote=true;
@@ -62,7 +67,7 @@
         body:JSON.stringify({code:x.code, data:serialize(), updated_at:new Date(x.updatedAt||Date.now()).toISOString()})
       });
       if(res.ok){ x.lastSync=Date.now(); origSave(); status("Synced ✓ "+new Date().toLocaleTimeString()); return {ok:true}; }
-      status("Push failed ("+res.status+") — check setup"); return {ok:false, status:res.status};
+      status(explain(res.status)); return {ok:false, status:res.status};
     }catch(e){ status("Offline — will retry"); return {ok:false, error:e.message}; }
   }
 
@@ -82,7 +87,7 @@
     } else if(r.ok && r.empty){
       push();    // nothing stored yet → seed the row
     } else {
-      status("Couldn't reach your Supabase — working locally");
+      status(explain(r.status||0));
     }
   }
 
@@ -121,13 +126,14 @@
               <li>In <b>Project Settings → API</b>, copy your <b>Project URL</b> and <b>anon public</b> key.</li>
               <li>Paste both here and press <b>Enable sync</b>.</li>
             </ol>
-            <pre class="coach-prompt" style="margin-top:10px">create table if not exists progress (
+            <pre class="coach-prompt" style="margin-top:10px">create table if not exists public.progress (
   code text primary key,
   data jsonb,
   updated_at timestamptz default now()
 );
-alter table progress enable row level security;
-create policy "sync by code" on progress
+alter table public.progress enable row level security;
+drop policy if exists "sync by code" on public.progress;
+create policy "sync by code" on public.progress
   for all to anon using (true) with check (true);</pre>
           </details>
           <label class="fl">Supabase Project URL</label>
