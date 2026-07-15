@@ -35,7 +35,8 @@ window.CE = (function(){
     behavioral:{stories:[], practiced:{}},
     foundations:{read:{}},
     tracks:{},            // per-track {done:{}}
-    settings:{apiKey:""}
+    settings:{apiKey:""},
+    sync:{url:"", key:"", code:"", enabled:false, updatedAt:0, lastSync:null}
   };
   function load(){
     try{

@@ -256,6 +256,7 @@ CE.route("#/settings", ()=>{
       </div>
       <div class="callout amber" style="margin-top:14px"><b>Note:</b> your Claude.ai subscription can't power in-app API calls — that needs a separate API key. The copy-paste Coach flow uses your subscription and costs nothing, so a key is never required.</div>
     </div>
+    <div class="card" id="cloudSync"></div>
     `,
     mount(root){
       CE.$$("#trackChips .chip",root).forEach(c=>c.onclick=()=>{
@@ -265,6 +266,7 @@ CE.route("#/settings", ()=>{
       });
       CE.$("#saveKey",root).onclick=()=>{ CE.state.settings.apiKey=CE.$("#apiKey",root).value.trim(); CE.save(); CE.toast("Key saved ✓"); };
       CE.$("#clearKey",root).onclick=()=>{ CE.state.settings.apiKey=""; CE.save(); CE.$("#apiKey",root).value=""; CE.toast("Key cleared"); };
+      if(CE.sync) CE.sync.mountSettings(CE.$("#cloudSync",root)); else CE.$("#cloudSync",root).remove();
     }
   };
 });

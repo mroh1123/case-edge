@@ -1,6 +1,6 @@
 /* CaseEdge service worker — precache the shell, then stale-while-revalidate:
    serve from cache instantly (works offline), refresh in the background. */
-const CACHE = "caseedge-v5";
+const CACHE = "caseedge-v6";
 const SHELL = [
   "./",
   "./index.html",
@@ -9,6 +9,7 @@ const SHELL = [
   "./assets/js/app.js",
   "./assets/js/engine/drill.js",
   "./assets/js/engine/coach.js",
+  "./assets/js/engine/sync.js",
   "./assets/js/engine/progress.js",
   "./assets/js/data/foundations.js",
   "./assets/js/data/frameworks.js",
