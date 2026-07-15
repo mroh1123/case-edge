@@ -63,7 +63,7 @@ CE.LESSON_COUNT = CE.FOUNDATIONS.length;
 
 CE.route("#/foundations", ()=>({
   html:`
-  ${CE.pageHead("Foundations", "Start here. Eight short lessons that teach the fundamentals from scratch — no prior knowledge assumed. Tap one to expand; opening it marks it read.")}
+  ${CE.pageHead("Foundations", "Start here. Eight short lessons that teach the fundamentals from scratch — no prior knowledge assumed. Expand a lesson to read it, then mark it read when you're done.")}
   <div id="foundList">
     ${CE.FOUNDATIONS.map(l=>{
       const read=CE.state.foundations.read[l.id];
@@ -75,16 +75,29 @@ CE.route("#/foundations", ()=>({
         <div class="l-body">
           <p style="color:var(--muted); font-size:14.5px; line-height:1.6">${l.body}</p>
           ${l.examples.map(e=>`<div class="example">${e}</div>`).join("")}
-          <button class="btn primary sm" data-nav="${l.practice.path}" style="margin-top:6px">${CE.esc(l.practice.text)} →</button>
+          <div class="btn-row" style="margin-top:8px">
+            <button class="btn primary sm" data-nav="${l.practice.path}">${CE.esc(l.practice.text)} →</button>
+            <button class="btn sm ${read?"":"grad"}" data-mark="${l.id}">${read?"✓ Read — click to unmark":"Mark as read"}</button>
+          </div>
         </div>
       </div>`;}).join("")}
   </div>`,
   mount(root){
-    CE.$$("#foundList .lesson",root).forEach(el=>{
-      el.querySelector("[data-accordion]").addEventListener("click",()=>{
-        const id=el.dataset.lid;
-        if(!CE.state.foundations.read[id]){ CE.state.foundations.read[id]=1; CE.save(); }
-      });
-    });
+    CE.$$("[data-mark]",root).forEach(b=>b.addEventListener("click",e=>{
+      e.stopPropagation();
+      const id=b.dataset.mark;
+      const lesson=b.closest(".lesson");
+      const nowRead=!CE.state.foundations.read[id];
+      if(nowRead){ CE.state.foundations.read[id]=1; CE.bumpActivity(); }
+      else delete CE.state.foundations.read[id];
+      CE.save();
+      // update this card in place (keeps the lesson expanded)
+      b.textContent = nowRead ? "✓ Read — click to unmark" : "Mark as read";
+      b.classList.toggle("grad", !nowRead);
+      const h3=lesson.querySelector(".l-head h3");
+      const badge=h3.querySelector(".badge");
+      if(nowRead && !badge){ h3.insertAdjacentHTML("beforeend", ' <span class="badge green" style="color:var(--green)">✓ read</span>'); }
+      else if(!nowRead && badge){ badge.remove(); }
+    }));
   }
 }));
