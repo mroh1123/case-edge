@@ -22,8 +22,8 @@ CE.MATH_TOPICS = [
    let p,b;
    if(lvl===1){ p=CE.pick([10,20,25,50,5]); b=CE.ri(2,20)*10; }
    else if(lvl===2){ p=CE.pick([15,30,40,12,6,75,35]); b=CE.ri(4,40)*5; }
-   else { p=CE.pick([18,22,35,45,65,85,12.5]); b=CE.ri(8,99)*5; }
-   const ans=Math.round(p*b)/100;
+   else { p=CE.pick([18,22,35,45,55,65,85]); b=CE.ri(8,99)*5; }  // integer p only: keeps ans exact (12.5 caused a rounding bug)
+   const ans=Math.round(p*b*100)/10000;   // exact to 2dp of a percent without corrupting .x75 answers
    return {q:`${p}% of ${CE.fmt(b)} = ?`, ans, tol:0,
      how:`Build ${p}% from 10s/5s/1s — 10% of ${CE.fmt(b)} is ${CE.fmt(b/10)}. Or flip it: ${p}% of ${CE.fmt(b)} = ${CE.fmt(b)}% of ${p}.`};
  }},
