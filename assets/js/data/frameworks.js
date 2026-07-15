@@ -180,7 +180,8 @@ CE.route("#/structuring", ()=>({
         const userText=tree.filter(b=>b.text.trim()).map(b=>`• ${b.text}\n${b.subs.filter(s=>s.trim()).map(s=>"   - "+s).join("\n")}`).join("\n");
         ra.innerHTML=`
           <hr class="sep">
-          <h3>Model MECE structure</h3>
+          <h3>A strong model structure</h3>
+          <div class="callout amber"><div class="c-t">There's no single right answer</div>This is <b>one</b> well-structured, MECE approach — not the only correct one. Interviewers reward a logical, exhaustive breakdown tailored to the prompt, not a memorized template. If your buckets differ but are still MECE and cover the drivers, that can be just as strong. Compare the <i>logic</i>, not the exact wording.</div>
           <div class="model-tree"><ul>
             ${p.model.map(br=>`<li>${CE.esc(br.b)}<ul>${br.s.map(x=>`<li>${CE.esc(x)}</li>`).join("")}</ul></li>`).join("")}
           </ul></div>

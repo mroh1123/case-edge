@@ -1,6 +1,6 @@
 /* CaseEdge service worker — precache the shell, then stale-while-revalidate:
    serve from cache instantly (works offline), refresh in the background. */
-const CACHE = "caseedge-v4";
+const CACHE = "caseedge-v5";
 const SHELL = [
   "./",
   "./index.html",
